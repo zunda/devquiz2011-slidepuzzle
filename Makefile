@@ -1,10 +1,11 @@
 #CFLAGS=-I. -O3
-CFLAGS=-I. -O3 -pg
-#CFLAGS=-I. -g -Wall -DDEBUG
+#CFLAGS=-I. -O3 -pg
+CFLAGS=-I. -g -Wall -DDEBUG -DCOUNT_MALLOC
 
 default: solver
 
-solver: game.o board.o boards.o
+#solver: game.o board.o boards.o
+solver: game.o board.o boards.o count-malloc.o
 
 answers: solve
 
