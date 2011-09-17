@@ -32,11 +32,11 @@ main(int argc, char **argv)
 {
 	int ngoals;
 	struct game_s *game;
-	struct board_s *board;
 	unsigned char h = 0, w = 0;
 	char *panels = NULL;
 	int vf = 0;
 	int cur_ttl, new_ttl, ttl = DEFAULT_TTL;;
+	unsigned long nq;
 
 	int o;
 	while((o = getopt(argc, argv, "hvp:n:")) != -1)
@@ -87,8 +87,9 @@ main(int argc, char **argv)
 			fprintf(stderr, "Looking for solutions within %d steps\n", cur_ttl);
 
 		game->max_step = cur_ttl;
-		board = game->start;
-		while(board) board = game_step(game, board, vf);
+		do {
+			nq = game_step(game, vf);
+		} while(nq > 0);
 
 		ngoals = game->ngoals;
 		new_ttl = cur_ttl * INFLATE_TTL;

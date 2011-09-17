@@ -83,7 +83,7 @@ boards_get(struct boards_s *boards, const char *panels)
 	cur = boards->table[i];
 	while(cur)
 		{
-			if (!strcmp(panels, cur->board->panels)) break;
+			if (cur->board && !strcmp(panels, cur->board->panels)) break;
 			prev = cur;
 			cur = cur->next;
 		}
@@ -100,4 +100,68 @@ boards_get(struct boards_s *boards, const char *panels)
 		}
 
 	return cur;
+}
+
+struct boards_queue_s *
+boards_queue_new(void)
+{
+	struct boards_queue_s *result;
+
+	result = (struct boards_queue_s *) malloc(sizeof(struct boards_queue_s));
+	result->first = NULL;
+	result->last = NULL;
+	result->n = 0;
+	return result;
+}
+
+void
+boards_queue_delete(struct boards_queue_s *queue)
+{
+	struct board_datum_s *cur, *next;
+	cur = queue->first;
+	while(cur)
+		{
+			next = cur->next;
+			board_delete(cur->board);
+			free(cur);
+			cur = next;
+		}
+	free(queue);
+}
+
+unsigned long
+boards_enque(struct boards_queue_s *queue, struct board_s *board)
+{
+	struct board_datum_s *datum;
+	datum = (struct board_datum_s *) malloc(sizeof(struct board_datum_s));
+	datum->board = board;
+	if (queue->last)
+		{
+			datum->next = NULL;
+			queue->last->next = datum;
+		}
+	else
+		{
+			datum->next = queue->first;
+			queue->first = datum;
+		}
+	queue->last = datum;
+	queue->n++;
+	return queue->n;
+}
+
+struct board_s *
+boards_deque(struct boards_queue_s *queue)
+{
+	struct board_datum_s *datum;
+	struct board_s *result;
+	datum = queue->first;
+	if (!datum) return NULL;
+
+	result = datum->board;
+	queue->first = datum->next;
+	if (!datum->next) queue->last = NULL;
+	free(datum);
+	queue->n--;
+	return result;
 }

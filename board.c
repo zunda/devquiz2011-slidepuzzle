@@ -20,7 +20,6 @@ board_panel_cmp(const void *a, const void *b)
 struct board_s *
 board_new(const char width, const char height, const char *panels)
 {
-	int i;
 	struct board_s *result;
 	result = (struct board_s *) malloc(sizeof(struct board_s));
 

@@ -23,30 +23,39 @@ game_new(const char width, const char height, const char *panels, BOARD_INDEX_T 
 	result->start->steps = 0;
 	result->goal = board_new(width, height, buf);
 	board_make_goal(result->goal);
-	result->boards = boards_new(tablesize);
-	boards_get(result->boards, result->start->panels)->board = result->start;
-	boards_get(result->boards, result->goal->panels)->board = result->goal;
-	/* result->start and result->goal will be free()ed through boards_delete */
-
+	result->open = boards_queue_new();
+	boards_enque(result->open, result->start);
+	result->closed = boards_new(tablesize);
+	boards_get(result->closed, result->start->panels)->board = result->start;
 	return result;
 }
 
 void
 game_delete(struct game_s *game)
 {
-	boards_delete(game->boards);
+	boards_delete(game->closed);
+	boards_queue_delete(game->open);
+	board_delete(game->goal);
 	free(game);
 }
 
-struct board_s *
-game_step(struct game_s *game, struct board_s *current, int vf)
+unsigned long
+game_step(struct game_s *game, int vf)
 {
 	int min_to_goal;
-	struct board_s *cur_board;
+	int direction;
 	struct board_datum_s *datum;
+	struct board_s *current, *cur_board;
 	char next_panels[BOARD_LEN_MAX];
 	int i, len;
 	char *solution;
+
+	current = boards_deque(game->open);
+	if (!current)
+		{
+			fputs("no more boards to visit\n", stderr);
+			return 0;
+		}
 
 	if (vf > 3) board_show(current, stderr);
 	if (vf > 2)
@@ -89,7 +98,7 @@ game_step(struct game_s *game, struct board_s *current, int vf)
 				}
 			fprintf(stdout, "%s\n", solution);
 			free(solution);
-			return current->prev;
+			return game->open->n;
 		}
 
 	/* can we go further away? */
@@ -98,44 +107,31 @@ game_step(struct game_s *game, struct board_s *current, int vf)
 			/* already used up the steps */
 			if (vf > 3)
 				fprintf(stderr, "steps limit: max:%d < current:%d + minimum to goal:%d\n", game->max_step, current->steps, min_to_goal);
-			current->direction = 4;
-			return current->prev;
+			return game->open->n;
 		}
 
 	/* ok, look around */
-	while(current->direction < 4)
+	for(direction = 0; direction < 4; direction++)
 		{
-			if (board_move(current, current->direction, next_panels))
+			if (board_move(current, direction, next_panels))
 				{
 					/* can move to this direction */
 					if (vf > 3)
-						fprintf(stderr, "looking into %c\n", BOARD_MOVES[current->direction]);
-					datum = boards_get(game->boards, next_panels);
+						fprintf(stderr, "looking into %c\n", BOARD_MOVES[direction]);
+					datum = boards_get(game->closed, next_panels);
 					if (!datum->board)
 						{
-							/* new visit */
 							if (vf > 3)
 								fprintf(stderr, "new visit\n");
 							datum->board = board_new(current->width, current->height, next_panels);
-						}
-					if (datum->board->steps > current->steps + 1)
-						{
-							/* shorter path than previous visit */
 							datum->board->prev = current;
+							datum->board->direction = direction;
 							datum->board->steps = current->steps + 1;
-							datum->board->direction = -1;
-							/* visit there */
-							if (vf > 3)
-								fprintf(stderr, "moving to %c\n", BOARD_MOVES[current->direction]);
-							return datum->board;
+							boards_enque(game->open, datum->board);
 						}
-					if (vf > 3)
-						fprintf(stderr, "steps limit: previous %d > current %d + 1\n", datum->board->steps, current->steps + 1);
+					/* todo: should move there if the step is shorter */
 				}
-			current->direction++;
 		}
 
-	/* move back */
-	if (vf > 3) fprintf(stderr, "moving back to direction:%d\n", current->direction);
-	return current->prev;
+	return game->open->n;
 }
