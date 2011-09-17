@@ -65,8 +65,8 @@ game_step(struct game_s *game, int vf)
 			i = len;
 			solution[i] = '\0';
 			i--;
-			cur_board = current->prev;
-			while(cur_board)
+			cur_board = current;
+			while(i >= 0)
 				{
 					solution[i] = BOARD_MOVES[cur_board->direction];
 					cur_board = cur_board->prev;
@@ -89,8 +89,8 @@ game_step(struct game_s *game, int vf)
 			i = len;
 			solution[i] = '\0';
 			i--;
-			cur_board = current->prev;
-			while(cur_board)
+			cur_board = current;
+			while(i >= 0)
 				{
 					solution[i] = BOARD_MOVES[cur_board->direction];
 					cur_board = cur_board->prev;
